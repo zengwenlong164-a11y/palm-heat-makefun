@@ -1,19 +1,43 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Block Dodger</title>
-<style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #11141b; }
-  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
-  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#102c31">
+  <link rel="icon" href="data:,">
+  <title>PALM HEAT — Coral Bay</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #102c31; color: #fff4d9; font-family: Arial, sans-serif; }
+    canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+    #menu { position: absolute; inset: 0; display: grid; align-content: center; justify-items: start; padding: 5vh 6vw; background: linear-gradient(90deg,rgba(8,29,35,.96),rgba(8,29,35,.8) 42%,transparent 85%); }
+    #menu[hidden] { display: none; }
+    .eyebrow { font-size: 12px; letter-spacing: 6px; color: #72dcc9; font-weight: bold; }
+    h1 { font-size: clamp(64px,9vw,132px); line-height: .83; font-style: italic; letter-spacing: -7px; margin: 24px 0; color: #ffedbd; text-shadow: 5px 6px 0 #d8636c; }
+    h1 span { display: block; }
+    #story { max-width: 425px; font-size: 16px; line-height: 1.6; color: #c5d8d3; }
+    .buttons { display: flex; gap: 12px; margin: 18px 0 24px; }
+    button { cursor: pointer; border: 1px solid #75918c; padding: 15px 27px; background: #193d40; color: #fff3ce; font: bold 13px Arial; letter-spacing: 2px; }
+    button:first-child { background: #ffd477; color: #123137; border-color: #ffd477; }
+    button:hover, button:focus-visible { outline: 3px solid #70e3cb; outline-offset: 4px; }
+    button[hidden] { display: none; }
+    #controls { max-width: 430px; font-size: 12px; line-height: 2; color: #a8c3bf; }
+    #controls b { color: #ffedbd; }
+    #edition { position: absolute; bottom: 25px; right: 28px; color: #fff3cf; font-size: 11px; letter-spacing: 3px; }
+    #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  </style>
 </head>
 <body>
-<canvas id="game" aria-label="Block Dodger: move the paddle left and right to dodge falling blocks and catch coins"></canvas>
-<p id="status" role="status" aria-live="polite"></p>
-<script type="module" src="./src/main.js"></script>
+  <canvas id="game" aria-label="Coral Bay open world. Use WASD to move, E to enter a vehicle, P to pause.">PALM HEAT requires a browser with Canvas 2D support.</canvas>
+  <main id="menu">
+    <div class="eyebrow">CORAL BAY / A CITY WITH NO CLEAN GETAWAYS</div>
+    <h1 id="heading"><span>PALM</span><span>HEAT</span></h1>
+    <p id="story">A full tank. A bad idea. A city that never forgets.<br>You're Rio, wheelman for fixer Delia Voss. Five jobs stand between you and a way out of Coral Bay.</p>
+    <div class="buttons"><button id="new">NEW GAME</button><button id="continue" hidden>CONTINUE</button></div>
+    <div id="controls"><b>WASD / ARROWS</b> move & drive · <b>SHIFT</b> run<br><b>E</b> enter / leave car · <b>SPACE</b> handbrake<br><b>MOUSE</b> aim · <b>CLICK</b> shoot · <b>P</b> pause · <b>M</b> mute<br>Gold marks the job. Lose the heat, keep the money.</div>
+  </main>
+  <div id="edition">AN ORIGINAL CRIME STORY &nbsp; / &nbsp; 01</div>
+  <div id="status" role="status" aria-live="polite"></div>
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>

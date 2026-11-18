@@ -1,79 +1,76 @@
-// The screenshot scenes behind ?shot=start|play|end. Each one plays the real rules forward from a
-// fresh world for a fixed number of steps, steered by a simple autopilot (look ahead each way the
-// paddle could move, keep clear of blocks, chase the lowest coin when that is safe), so the frame
-// is what a short game really looks like and the same seed always gives the same frame.
-import { FIELD, PLAYER, STEP } from './config.js';
-import { EVENT_OVER, KIND_BLOCK } from './world.js';
-import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+import { createCar } from './vehicles.js';
+import { spawnPoliceCar, setWantedStars } from './police.js';
+import { beginMission, updateObjective } from './missions.js';
+import { updateCamera } from './render.js';
 
-const START_SECONDS = 5;
-const PLAY_SECONDS = 26;
-const END_LIMIT_SECONDS = 600;
-/**
- * How far ahead, in seconds, the autopilot checks each way it could move: the play scene's pilot
- * looks well ahead and keeps all its lives; the end scene's looks only a moment ahead, so it is
- * caught out once the blocks speed up, as a hurried player is.
- */
-const HORIZON_PLAY = 0.7;
-const HORIZON_END = 0.25;
-const SAMPLE = 1 / 30;
-const DIRECTIONS = [0, -1, 1];
-/** Extra room, each side, it keeps between the paddle and a block. */
-const MARGIN = 10;
-
-/** Seconds until moving in `direction` (-1, 0, 1) runs the paddle into a block; Infinity when it never does. */
-function timeToHit(state, direction, horizon) {
-  const player = state.player;
-  for (let t = SAMPLE; t <= horizon; t += SAMPLE) {
-    const x = Math.min(FIELD.width - player.width, Math.max(0, player.x + direction * PLAYER.speed * t));
-    for (let index = 0; index < state.items.length; index += 1) {
-      const item = state.items[index];
-      if (!item.active || item.kind !== KIND_BLOCK) continue;
-      const y = item.y + item.speed * t;
-      if (y + item.height > player.y && y < player.y + player.height && item.x < x + player.width + MARGIN && item.x + item.width > x - MARGIN) return t;
+// Scenes are authored initial conditions, then advanced through the real loop.
+// Frozen at a fixed tick, they never depend on browser speed or capture timing.
+export function prepareScreenshotScene(game, name) {
+  game.shot = name;
+  game.screen = 'playing';
+  game.cash = 2840;
+  game.mission.index = name === 'chase' ? 1 : 0;
+  beginMission(game);
+  game.noticeTimer = 0;
+  game.police.spawnTimer = 100;
+  if (name === 'foot') {
+    game.player.x = 1470;
+    game.player.y = 2430;
+    game.player.angle = -.5;
+    game.mission.index = 2;
+    beginMission(game);
+    game.noticeTimer = 0;
+    game.input.mouse.x = 815;
+    game.input.mouse.y = 370;
+    for (let n = 0; n < 16; n++) {
+      game.people.push({ x: 1150 + n * 42, y: 2400 + n % 4 * 33, angle: n * .9,
+        health: 100, panic: 0, turn: 8, phase: n, color: ['#d98278', '#ead4a3', '#88bdb6'][n % 3] });
+    }
+    const parked = createCar(1400, 2278, 0, '#e7bd67', 'parked');
+    game.cars.push(parked);
+  } else {
+    const car = game.cars.find(item => item.marked);
+    car.x = name === 'title' ? 1280 : name === 'chase' ? 1030 : 650;
+    car.y = name === 'title' ? 2120 : 784;
+    car.angle = name === 'title' ? Math.PI / 2 : -.035;
+    car.speed = name === 'title' ? 0 : 145;
+    car.stolen = true;
+    car.kind = 'player';
+    game.player.car = car;
+    game.player.x = car.x;
+    game.player.y = car.y;
+    game.input.held.add('KeyW');
+    if (name === 'title') game.input.held.clear();
+    if (name === 'chase') {
+      // Leave a pursuit corridor, rather than turning the staged chase into
+      // unrelated traffic crimes during its fixed simulation warmup.
+      game.cars = game.cars.filter(item => item === car || Math.abs(item.y - 784) > 85 || item.x < 800 || item.x > 2200);
+      game.people = game.people.filter(person => Math.abs(person.y - 784) > 85 || person.x < 800 || person.x > 2200);
+      game.mission.stage = 1;
+      game.mission.timer = 77;
+      setWantedStars(game, 3);
+      spawnPoliceCar(game, { x: 850, y: 787 });
+      spawnPoliceCar(game, { x: 760, y: 900 });
+      spawnPoliceCar(game, { x: 1280, y: 1080 });
+      game.player.car.health = 83;
+    }
+    if (name === 'cover') {
+      game.mission.stage = 1;
+      game.cars.push(createCar(950, 734, Math.PI, '#88b4aa'));
+      game.cars.push(createCar(1170, 784, 0, '#d77570'));
+      game.cars.push(createCar(785, 1030, -Math.PI / 2, '#aabbd0'));
     }
   }
-  return Infinity;
-}
-
-/** Of the safe ways to move, the one toward the lowest coin (or the centre); else the one that is hit last. */
-function autopilot(state, horizon) {
-  const player = state.player;
-  let coin = null;
-  for (let index = 0; index < state.items.length; index += 1) {
-    const item = state.items[index];
-    if (item.active && item.kind !== KIND_BLOCK && (coin === null || item.y > coin.y)) coin = item;
-  }
-  const target = coin === null ? FIELD.width / 2 : coin.x + coin.width / 2;
-  const centre = player.x + player.width / 2;
-  const wanted = target > centre + 8 ? 1 : target < centre - 8 ? -1 : 0;
-  let best = wanted;
-  let bestTime = timeToHit(state, wanted, horizon);
-  for (let index = 0; index < DIRECTIONS.length && bestTime !== Infinity; index += 1) {
-    const time = timeToHit(state, DIRECTIONS[index], horizon);
-    if (time > bestTime) {
-      bestTime = time;
-      best = DIRECTIONS[index];
-    }
-  }
-  return best;
-}
-
-/**
- * Set `world` to the named scene (start, play or end; any other name is start) and return the
- * screen to draw over it and the best score to show.
- */
-export function stageShot(name, world) {
-  world.reset();
-  if (name !== 'play' && name !== 'end') {
-    for (let index = 0; index < START_SECONDS / STEP; index += 1) world.step(STEP, 0, true);
-    return { screen: SCREEN_TITLE, best: 0 };
-  }
-  const limit = name === 'end' ? END_LIMIT_SECONDS : PLAY_SECONDS;
-  const horizon = name === 'end' ? HORIZON_END : HORIZON_PLAY;
-  for (let index = 0; index < limit / STEP; index += 1) {
-    if (world.step(STEP, autopilot(world.state, horizon), false) & EVENT_OVER) break;
-  }
-  const over = world.state.lives === 0;
-  return { screen: over ? SCREEN_OVER : SCREEN_PLAY, best: world.state.score };
+  updateObjective(game);
+  updateCamera(game, 1, true);
+  for (let tick = 0; tick < 150; tick++) game.step(1 / 60, true);
+  game.input.held.clear();
+  game.noticeTimer = 0;
+  game.completeTimer = 0;
+  // The editorial snapshot is specifically a three-star pursuit, even if
+  // an incidental traffic collision occurred during the warmup.
+  if (name === 'chase') setWantedStars(game, 3);
+  if (name === 'title') game.screen = 'title';
+  updateCamera(game, 1, true);
+  game.frozen = true;
 }
