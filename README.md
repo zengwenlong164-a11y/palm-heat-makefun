@@ -10,6 +10,10 @@ runs. All visuals are Canvas 2D drawing commands. All sound is synthesized
 with WebAudio oscillators. There are no external assets, dependencies, builds,
 or runtime network calls beyond loading the local ES modules.
 
+> Tip: finish all five of Delia Voss's jobs to complete the story — taxi
+> fares and package runs stay open afterwards for extra cash.
+> Standing nearly still beside police fills the bust meter — keep moving.
+
 ## Play
 
 Run `node serve.ts`, then open http://localhost:8080.
